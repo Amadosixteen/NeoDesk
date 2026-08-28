@@ -7,7 +7,7 @@ project(runner LANGUAGES C CXX)
 set(BINARY_NAME "rustdesk")
 # The unique GTK application identifier for this application. See:
 # https://wiki.gnome.org/HowDoI/ChooseApplicationID
-set(APPLICATION_ID "com.geatel.neoportal")
+set(APPLICATION_ID "com.geatel.neodesk")
 
 # Explicitly opt into modern CMake behaviors to avoid warnings with recent
 # versions of CMake.

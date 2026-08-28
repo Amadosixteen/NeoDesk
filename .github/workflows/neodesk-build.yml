@@ -1,4 +1,4 @@
-name: NeoPortal - build Windows y Linux
+name: NeoDesk - build Windows y Linux
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
         default: true
       upload-tag:
         type: string
-        default: "neoportal"
+        default: "neodesk"
   workflow_call:
     inputs:
       upload-artifact:

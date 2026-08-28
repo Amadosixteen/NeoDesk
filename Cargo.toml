@@ -4,7 +4,7 @@ version = "1.4.9"
 authors = ["Amado Cahuaza"]
 edition = "2021"
 build= "build.rs"
-description = "NeoPortal — escritorio remoto rapido y estable, por Amado Cahuaza"
+description = "NeoDesk — escritorio remoto rapido y estable, por Amado Cahuaza"
 default-run = "rustdesk"
 rust-version = "1.75"
 
@@ -237,7 +237,7 @@ docopt = "1.1"
 
 [package.metadata.bundle]
 name = "RustDesk"
-identifier = "com.geatel.neoportal"
+identifier = "com.geatel.neodesk"
 icon = ["res/32x32.png", "res/128x128.png", "res/128x128@2x.png"]
 osx_minimum_system_version = "10.14"
 
