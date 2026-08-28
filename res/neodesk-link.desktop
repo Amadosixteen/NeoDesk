@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=NeoDesk
+NoDisplay=true
+MimeType=x-scheme-handler/neodesk;
+TryExec=neodesk
+Exec=neodesk %u
+Icon=neodesk
+Terminal=false
+Type=Application
+StartupNotify=false
+StartupWMClass=neodesk

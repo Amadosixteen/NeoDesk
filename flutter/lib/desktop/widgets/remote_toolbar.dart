@@ -841,14 +841,14 @@ class _RemoteToolbarState extends State<RemoteToolbar> {
       state: widget.state,
       setFullscreen: _setFullscreen,
     ));
-    // Do not show keyboard for camera connection type.
-    if (widget.ffi.connType == ConnType.defaultConn) {
-      toolbarItems.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
-    }
-    toolbarItems.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
-    if (!isWeb) {
-      toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
-    }
+//     // Do not show keyboard for camera connection type.
+//     if (widget.ffi.connType == ConnType.defaultConn) {
+//       toolbarItems.add(_KeyboardMenu(id: widget.id, ffi: widget.ffi));
+//     }
+//     toolbarItems.add(_ChatMenu(id: widget.id, ffi: widget.ffi));
+//     if (!isWeb) {
+//       toolbarItems.add(_VoiceCallMenu(id: widget.id, ffi: widget.ffi));
+//     }
     if (!isWeb) toolbarItems.add(_RecordMenu());
     toolbarItems.add(_CloseMenu(id: widget.id, ffi: widget.ffi));
     final toolbarBorderRadius = BorderRadius.all(Radius.circular(4.0));
@@ -1310,7 +1310,7 @@ class _ControlMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return _IconSubmenuButton(
         tooltip: 'Control Actions',
-        svg: "assets/actions.svg",
+        svg: "assets/settings_gear.svg",
         color: _ToolbarTheme.blueColor,
         hoverColor: _ToolbarTheme.hoverBlueColor,
         ffi: ffi,
@@ -1733,54 +1733,54 @@ class _DisplayMenuState extends State<_DisplayMenu> {
       final menuChildren = <Widget>[
         _screenAdjustor.adjustWindow(context),
         viewStyle(customPercent: _customPercent),
-        scrollStyle(state, colorScheme),
+//         scrollStyle(state, colorScheme),
         imageQuality(),
-        codec(),
-        if (ffi.connType == ConnType.defaultConn)
-          _ResolutionsMenu(
-            id: widget.id,
-            ffi: widget.ffi,
-            screenAdjustor: _screenAdjustor,
-          ),
-        if (showVirtualDisplayMenu(ffi) && ffi.connType == ConnType.defaultConn)
-          _SubmenuButton(
-            ffi: widget.ffi,
-            menuChildren: getVirtualDisplayMenuChildren(ffi, id, null),
-            child: Text(translate("Virtual display")),
-          ),
-        if (ffi.connType == ConnType.defaultConn) cursorToggles(),
-        Divider(),
-        toggles(),
+//         codec(),
+//         if (ffi.connType == ConnType.defaultConn)
+//           _ResolutionsMenu(
+//             id: widget.id,
+//             ffi: widget.ffi,
+//             screenAdjustor: _screenAdjustor,
+//           ),
+//         if (showVirtualDisplayMenu(ffi) && ffi.connType == ConnType.defaultConn)
+//           _SubmenuButton(
+//             ffi: widget.ffi,
+//             menuChildren: getVirtualDisplayMenuChildren(ffi, id, null),
+//             child: Text(translate("Virtual display")),
+//           ),
+//         if (ffi.connType == ConnType.defaultConn) cursorToggles(),
+//         Divider(),
+//         toggles(),
       ];
-      // privacy mode
-      final privacyModeState = PrivacyModeState.find(id);
-      if (ffi.connType == ConnType.defaultConn &&
-          (pi.features.privacyMode || privacyModeState.isNotEmpty) &&
-          (ffiModel.keyboard || privacyModeState.isNotEmpty)) {
-        final privacyModeList =
-            toolbarPrivacyMode(privacyModeState, context, id, ffi);
-        if (privacyModeList.length == 1) {
-          menuChildren.add(CkbMenuButton(
-              value: privacyModeList[0].value,
-              onChanged: privacyModeList[0].onChanged,
-              child: privacyModeList[0].child,
-              ffi: ffi));
-        } else if (privacyModeList.length > 1) {
-          menuChildren.addAll([
-            Divider(),
-            _SubmenuButton(
-                ffi: widget.ffi,
-                child: Text(translate('Privacy mode')),
-                menuChildren: privacyModeList
-                    .map((e) => CkbMenuButton(
-                        value: e.value,
-                        onChanged: e.onChanged,
-                        child: e.child,
-                        ffi: ffi))
-                    .toList()),
-          ]);
-        }
-      }
+//       // privacy mode
+//       final privacyModeState = PrivacyModeState.find(id);
+//       if (ffi.connType == ConnType.defaultConn &&
+//           (pi.features.privacyMode || privacyModeState.isNotEmpty) &&
+//           (ffiModel.keyboard || privacyModeState.isNotEmpty)) {
+//         final privacyModeList =
+//             toolbarPrivacyMode(privacyModeState, context, id, ffi);
+//         if (privacyModeList.length == 1) {
+//           menuChildren.add(CkbMenuButton(
+//               value: privacyModeList[0].value,
+//               onChanged: privacyModeList[0].onChanged,
+//               child: privacyModeList[0].child,
+//               ffi: ffi));
+//         } else if (privacyModeList.length > 1) {
+//           menuChildren.addAll([
+//             Divider(),
+//             _SubmenuButton(
+//                 ffi: widget.ffi,
+//                 child: Text(translate('Privacy mode')),
+//                 menuChildren: privacyModeList
+//                     .map((e) => CkbMenuButton(
+//                         value: e.value,
+//                         onChanged: e.onChanged,
+//                         child: e.child,
+//                         ffi: ffi))
+//                     .toList()),
+//           ]);
+//         }
+//       }
       return menuChildren;
     }
 

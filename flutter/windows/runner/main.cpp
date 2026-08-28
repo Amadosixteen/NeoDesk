@@ -23,17 +23,17 @@ const wchar_t* getWindowClassName();
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command)
 {
-  HINSTANCE hInstance = LoadLibraryA("librustdesk.dll");
+  HINSTANCE hInstance = LoadLibraryA("libneodesk.dll");
   if (!hInstance)
   {
-    std::cout << "Failed to load librustdesk.dll." << std::endl;
+    std::cout << "Failed to load libneodesk.dll." << std::endl;
     return EXIT_FAILURE;
   }
-  FUNC_RUSTDESK_CORE_MAIN rustdesk_core_main =
-      (FUNC_RUSTDESK_CORE_MAIN)GetProcAddress(hInstance, "rustdesk_core_main_args");
-  if (!rustdesk_core_main)
+  FUNC_RUSTDESK_CORE_MAIN neodesk_core_main =
+      (FUNC_RUSTDESK_CORE_MAIN)GetProcAddress(hInstance, "neodesk_core_main_args");
+  if (!neodesk_core_main)
   {
-    std::cout << "Failed to get rustdesk_core_main." << std::endl;
+    std::cout << "Failed to get neodesk_core_main." << std::endl;
     return EXIT_FAILURE;
   }
   FUNC_RUSTDESK_FREE_ARGS free_c_args =
@@ -51,7 +51,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
 
   int args_len = 0;
-  char** c_args = rustdesk_core_main(&args_len);
+  char** c_args = neodesk_core_main(&args_len);
   if (!c_args)
   {
     std::string args_str = "";
@@ -63,10 +63,10 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   }
   std::vector<std::string> rust_args(c_args, c_args + args_len);
   free_c_args(c_args, args_len);
-  FUNC_RUSTDESK_IS_DISABLE_INSTALLATION rustdesk_is_disable_installation =
-      (FUNC_RUSTDESK_IS_DISABLE_INSTALLATION)GetProcAddress(hInstance, "rustdesk_is_disable_installation");
+  FUNC_RUSTDESK_IS_DISABLE_INSTALLATION neodesk_is_disable_installation =
+      (FUNC_RUSTDESK_IS_DISABLE_INSTALLATION)GetProcAddress(hInstance, "neodesk_is_disable_installation");
   bool is_disable_installation =
-      rustdesk_is_disable_installation && rustdesk_is_disable_installation() != 0;
+      neodesk_is_disable_installation && neodesk_is_disable_installation() != 0;
   const auto installParam = std::string("--install");
   // Flutter reads the original process command line, not only rust_args, so
   // remove the `--install` injected by the portable wrapper here as well. This
@@ -80,11 +80,11 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
         command_line_arguments.end());
   }
 
-  std::wstring app_name = L"RustDesk";
-  FUNC_RUSTDESK_GET_APP_NAME get_rustdesk_app_name = (FUNC_RUSTDESK_GET_APP_NAME)GetProcAddress(hInstance, "get_rustdesk_app_name");
-  if (get_rustdesk_app_name) {
+  std::wstring app_name = L"NeoDesk";
+  FUNC_RUSTDESK_GET_APP_NAME get_neodesk_app_name = (FUNC_RUSTDESK_GET_APP_NAME)GetProcAddress(hInstance, "get_neodesk_app_name");
+  if (get_neodesk_app_name) {
     wchar_t app_name_buffer[512] = {0};
-    if (get_rustdesk_app_name(app_name_buffer, 512) == 0) {
+    if (get_neodesk_app_name(app_name_buffer, 512) == 0) {
       app_name = std::wstring(app_name_buffer);
     }
   }

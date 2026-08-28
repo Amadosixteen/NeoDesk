@@ -1,0 +1,19 @@
+[Desktop Entry]
+Name=NeoDesk
+GenericName=Escritorio remoto
+Comment=Conectate a otro equipo de forma remota
+Exec=neodesk %u
+Icon=neodesk
+Terminal=false
+Type=Application
+StartupNotify=true
+Categories=Network;RemoteAccess;GTK;
+Keywords=remoto;escritorio;neodesk;remote;desktop;p2p;
+Actions=new-window;
+StartupWMClass=neodesk
+
+X-Desktop-File-Install-Version=0.23
+
+[Desktop Action new-window]
+Name=Abrir una ventana nueva
+Exec=neodesk %u

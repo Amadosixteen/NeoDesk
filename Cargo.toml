@@ -1,15 +1,15 @@
 [package]
-name = "rustdesk"
-version = "1.4.9"
+name = "neodesk"
+version = "1.0.0"
 authors = ["Amado Cahuaza"]
 edition = "2021"
 build= "build.rs"
 description = "NeoDesk — escritorio remoto rapido y estable, por Amado Cahuaza"
-default-run = "rustdesk"
+default-run = "neodesk"
 rust-version = "1.75"
 
 [lib]
-name = "librustdesk"
+name = "libneodesk"
 crate-type = ["cdylib", "staticlib", "rlib"]
 
 [[bin]]
@@ -218,9 +218,9 @@ libxdo-sys = { path = "libs/libxdo-sys-stub" }
 
 [package.metadata.winres]
 LegalCopyright = "Copyright © 2026 Purslane Tech Pte. Ltd. All rights reserved."
-ProductName = "RustDesk"
-FileDescription = "RustDesk Remote Desktop"
-OriginalFilename = "rustdesk.exe"
+ProductName = "NeoDesk"
+FileDescription = "NeoDesk Escritorio Remoto"
+OriginalFilename = "neodesk.exe"
 
 [target.'cfg(target_os="windows")'.build-dependencies]
 winres = "0.1"

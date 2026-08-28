@@ -3744,7 +3744,8 @@ Color? disabledTextColor(BuildContext context, bool enabled) {
 }
 
 Widget loadPowered(BuildContext context) {
-  if (bind.mainGetBuildinOption(key: "hide-powered-by-me") == 'Y') {
+  // NeoDesk: credito de marca oculto por defecto.
+  if (bind.mainGetBuildinOption(key: "hide-powered-by-me") != 'N') {
     return SizedBox.shrink();
   }
   return MouseRegion(
@@ -3821,7 +3822,7 @@ class _LogoState extends State<_Logo> {
             },
           );
           return Container(
-            constraints: BoxConstraints(maxWidth: 300, maxHeight: 60),
+            constraints: BoxConstraints(maxWidth: 380, maxHeight: 92),
             child: image,
           ).marginOnly(left: 12, right: 12, top: 12);
         }
@@ -3831,7 +3832,7 @@ class _LogoState extends State<_Logo> {
   }
 }
 
-// max 300 x 60
+// max 380 x 92
 Widget loadLogo() => const _Logo();
 
 Widget loadIcon(double size) {
