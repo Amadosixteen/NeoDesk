@@ -2,6 +2,13 @@ name: NeoPortal - build Windows y Linux
 
 on:
   workflow_dispatch:
+    inputs:
+      upload-artifact:
+        type: boolean
+        default: true
+      upload-tag:
+        type: string
+        default: "neoportal"
   workflow_call:
     inputs:
       upload-artifact:
