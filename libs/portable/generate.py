@@ -9,6 +9,9 @@ import datetime
 
 # 4GB maximum
 length_count = 4
+# Tiene que coincidir byte a byte con IDENTIFIER en src/bin_reader.rs: el lector usa su
+# longitud para recorrer el archivo, asi que un nombre de otro largo lo rompe en silencio.
+identifier = "neodesk"
 # encoding
 encoding = 'utf-8'
 
@@ -39,7 +42,7 @@ def generate_md5_table(folder: str, level) -> dict:
 def write_package_metadata(md5_table: dict, output_folder: str, exe: str):
     output_path = os.path.join(output_folder, "data.bin")
     with open(output_path, "wb") as f:
-        f.write("neodesk".encode(encoding=encoding))
+        f.write(identifier.encode(encoding=encoding))
         for path in md5_table.keys():
             (compressed_data, md5_code) = md5_table[path]
             data_length = len(compressed_data)
@@ -54,7 +57,7 @@ def write_package_metadata(md5_table: dict, output_folder: str, exe: str):
             # md5 code
             f.write(md5_code)
         # end
-        f.write("neodesk".encode(encoding=encoding))
+        f.write(identifier.encode(encoding=encoding))
         # executable
         f.write(exe.encode(encoding='utf-8'))
     print(f"Metadata has been written to {output_path}")

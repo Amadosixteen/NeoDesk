@@ -367,6 +367,22 @@ jobs:
           mkdir -p ./SignOutput
           mv ./target/release/neodesk-portable-packer.exe ./SignOutput/neodesk-${{ env.VERSION }}-${{ matrix.job.arch }}.exe
 
+      - name: Verificar el autoextraible
+        # Esto es lo que descarga la gente. La verificacion anterior probaba ./neodesk/neodesk.exe,
+        # el binario de dentro, y dejaba sin probar el empaquetado: cuando el identificador del
+        # payload cambio de largo, el autoextraible moria en un panic sin abrir ninguna ventana y
+        # CI lo daba por bueno igual.
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = "Stop"
+          $exe = (Get-ChildItem ./SignOutput/neodesk-*.exe | Select-Object -First 1).FullName
+          if (-not $exe) { throw "no se genero el autoextraible" }
+          Write-Host "probando $exe"
+          $p = Start-Process $exe -ArgumentList '--version' -PassThru -NoNewWindow
+          if (-not $p.WaitForExit(60000)) { $p.Kill(); throw "el autoextraible se colgo" }
+          if ($p.ExitCode -ne 0) { throw "el autoextraible fallo (codigo $($p.ExitCode)): no pudo desempaquetar su contenido" }
+          Write-Host "el autoextraible desempaqueta y arranca correctamente"
+
       - name: Sign neodesk self-extracted file
         if: env.UPLOAD_ARTIFACT == 'true' && env.SIGN_BASE_URL != '-2'
         shell: bash
