@@ -73,7 +73,16 @@ lazy_static::lazy_static! {
     static ref KEY_PAIR: Mutex<Option<KeyPair>> = Default::default();
     static ref USER_DEFAULT_CONFIG: RwLock<(UserDefaultConfig, Instant)> = RwLock::new((UserDefaultConfig::load(), Instant::now()));
     pub static ref NEW_STORED_PEER_CONFIG: Mutex<HashSet<String>> = Default::default();
-    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
+    // NeoDesk: acceso desatendido de fabrica. Son *defaults*, no imposiciones: la precedencia
+    // es OVERWRITE > opciones del usuario > estas, asi que cualquiera puede cambiarlas en
+    // Ajustes. Las tres van juntas porque `password_security::hide_cm()` exige las tres a la
+    // vez; con menos, el equipo controlado sigue mostrando la ventana de confirmacion y hace
+    // falta alguien delante para pulsar Aceptar.
+    pub static ref DEFAULT_SETTINGS: RwLock<HashMap<String, String>> = RwLock::new(HashMap::from([
+        ("approve-mode".to_owned(), "password".to_owned()),
+        ("verification-method".to_owned(), "use-permanent-password".to_owned()),
+        ("allow-hide-cm".to_owned(), "Y".to_owned()),
+    ]));
     pub static ref OVERWRITE_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref DEFAULT_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
     pub static ref OVERWRITE_DISPLAY_SETTINGS: RwLock<HashMap<String, String>> = Default::default();
