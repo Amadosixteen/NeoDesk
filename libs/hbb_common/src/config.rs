@@ -2371,15 +2371,21 @@ impl UserDefaultConfig {
             #[cfg(any(target_os = "android", target_os = "ios"))]
             keys::OPTION_VIEW_STYLE => self.get_string(key, "adaptive", vec!["original"]),
             #[cfg(not(any(target_os = "android", target_os = "ios")))]
-            keys::OPTION_VIEW_STYLE => self.get_string(key, "original", vec!["adaptive"]),
+            // NeoDesk: escala adaptativa por defecto en escritorio (upstream traia "original").
+            keys::OPTION_VIEW_STYLE => self.get_string(key, "adaptive", vec!["original"]),
             keys::OPTION_SCROLL_STYLE => {
                 self.get_string(key, "scrollauto", vec!["scrolledge", "scrollbar"])
             }
             keys::OPTION_IMAGE_QUALITY => {
-                self.get_string(key, "balanced", vec!["best", "low", "custom"])
+                // NeoDesk: "low" (Optimizar el tiempo de reaccion) por defecto, prioriza
+                // fluidez sobre nitidez. El usuario puede subirla en Ajustes -> Pantalla.
+                self.get_string(key, "low", vec!["best", "balanced", "custom"])
             }
             keys::OPTION_CODEC_PREFERENCE => {
-                self.get_string(key, "auto", vec!["vp8", "vp9", "av1", "h264", "h265"])
+                // NeoDesk: VP8 por defecto en vez de "auto". Auto elige AV1 por software
+                // cuando el hardware no esta disponible, que es el codec mas lento para
+                // tiempo real; VP8 es ligero y responde mejor sobre el relay publico.
+                self.get_string(key, "vp8", vec!["auto", "vp9", "av1", "h264", "h265"])
             }
             keys::OPTION_CUSTOM_IMAGE_QUALITY => self.get_num_string(key, 50.0, 10.0, 0xFFF as f64),
             keys::OPTION_CUSTOM_FPS => self.get_num_string(key, 30.0, 5.0, 120.0),
@@ -2821,7 +2827,10 @@ pub fn is_disable_ab() -> bool {
 
 #[inline]
 pub fn is_disable_account() -> bool {
-    is_some_hard_opton("disable-account")
+    // NeoDesk: seccion Cuenta oculta. Apunta a los servidores de cuentas de RustDesk
+    // (api.rustdesk.com / Server Pro de pago), que no usamos; sin eso, "Iniciar sesion"
+    // no lleva a ningun lado. Se fuerza en vez de depender de un hard-setting de compilacion.
+    true
 }
 
 #[inline]
