@@ -52,7 +52,7 @@ env:
   # 2. Update the `VCPKG_COMMIT_ID` in `ci.yml` and `playground.yml`.
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
-  VERSION: "1.0.0"
+  VERSION: "1.1.0"
   NDK_VERSION: "r28c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -297,6 +297,10 @@ jobs:
           $ErrorActionPreference = "Stop"
           if (-not (Test-Path ./neodesk/neodesk.exe))     { throw "falta neodesk.exe" }
           if (-not (Test-Path ./neodesk/libneodesk.dll))  { throw "falta libneodesk.dll" }
+          foreach ($a in @('icon.png','logo.png','logo_dark.png','logo_light.png','settings_gear.svg')) {
+            if (-not (Test-Path "./neodesk/data/flutter_assets/assets/$a")) { throw "FALTA el recurso de marca: $a" }
+          }
+          Write-Host "recursos de marca: presentes"
           if (Get-ChildItem ./neodesk -Filter 'librustdesk.*' -ErrorAction SilentlyContinue) {
             throw "quedo una librería con el nombre antiguo"
           }
@@ -662,6 +666,21 @@ jobs:
             for name in neodesk*??.deb; do
               mv "$name" "${name%%.deb}-${{ matrix.job.arch }}.deb"
             done
+
+      - name: Verificar la marca en el paquete
+        # El .gitignore heredado ignora *png y *svg en todo el arbol, asi que un recurso
+        # nuevo puede quedarse fuera del repositorio sin que nada avise: compila igual y
+        # el instalador sale con el logo generico. Esto lo convierte en un fallo ruidoso.
+        if: matrix.job.arch == 'x86_64' || env.UPLOAD_ARTIFACT == 'true'
+        run: |
+          deb=$(ls neodesk-*.deb 2>/dev/null | head -1)
+          [ -n "$deb" ] || { echo "no se genero ningun .deb"; exit 1; }
+          lista=$(dpkg-deb -c "$deb")
+          for a in icon.png logo.png logo_dark.png logo_light.png settings_gear.svg; do
+            echo "$lista" | grep -q "flutter_assets/assets/$a" \
+              || { echo "FALTA el recurso de marca: $a"; exit 1; }
+          done
+          echo "los recursos de marca estan en el paquete"
 
       - name: Publish debian package
         if: env.UPLOAD_ARTIFACT == 'true'

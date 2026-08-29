@@ -1,6 +1,6 @@
 [package]
 name = "neodesk"
-version = "1.0.0"
+version = "1.1.0"
 authors = ["Amado Cahuaza"]
 edition = "2021"
 build= "build.rs"

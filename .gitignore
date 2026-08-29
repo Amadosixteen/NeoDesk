@@ -17,6 +17,14 @@ cert.pfx
 *png
 *svg
 *jpg
+# Las tres reglas de arriba vienen de upstream y son ciegas: ignoran cualquier imagen
+# nueva en todo el arbol, sin avisar. Asi se perdieron los logos de Geatel y el icono
+# del engranaje, que existian en local pero nunca llegaron a CI, y los instaladores
+# salieron sin marca. Las carpetas de recursos quedan exentas.
+!flutter/assets/*.png
+!flutter/assets/*.svg
+!res/*.png
+!res/*.svg
 sciter.dll
 **pdb
 src/bridge_generated.rs
