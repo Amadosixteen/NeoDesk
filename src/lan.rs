@@ -23,6 +23,74 @@ use std::{
 
 type Message = RendezvousMessage;
 
+/// NeoDesk: TCP port of `lan_secure_server` (encrypted, unlike the 21118 direct server).
+pub const LAN_SECURE_PORT: u16 = (RENDEZVOUS_PORT + 4) as u16;
+
+lazy_static::lazy_static! {
+    // id -> (found ip, lookup finished)
+    static ref LAN_LOOKUP: std::sync::Mutex<HashMap<String, (Option<IpAddr>, bool)>> =
+        Default::default();
+}
+
+/// NeoDesk: ask the LAN in the background which address answers for `id`, so a connection
+/// by ID can go straight over the LAN when both ends share a network.
+pub fn start_peer_lookup(id: String) {
+    if !config::option2bool(
+        "enable-lan-discovery",
+        &Config::get_option("enable-lan-discovery"),
+    ) {
+        return;
+    }
+    LAN_LOOKUP.lock().unwrap().insert(id.clone(), (None, false));
+    std::thread::spawn(move || {
+        let ip = lookup_peer_ip(&id);
+        log::info!("LAN lookup for {}: {:?}", id, ip);
+        if let Some(entry) = LAN_LOOKUP.lock().unwrap().get_mut(&id) {
+            *entry = (ip, true);
+        }
+    });
+}
+
+fn lookup_peer_ip(id: &str) -> Option<IpAddr> {
+    let sockets = send_query().ok()?;
+    for socket in &sockets {
+        socket
+            .set_read_timeout(Some(std::time::Duration::from_millis(20)))
+            .ok();
+    }
+    let start = Instant::now();
+    while start.elapsed().as_millis() < 1500 {
+        for socket in &sockets {
+            let mut buf = [0; 2048];
+            if let Ok((len, addr)) = socket.recv_from(&mut buf) {
+                if let Ok(msg_in) = Message::parse_from_bytes(&buf[0..len]) {
+                    if let Some(rendezvous_message::Union::PeerDiscovery(p)) = msg_in.union {
+                        if p.cmd == "pong" && p.id == id {
+                            return Some(addr.ip());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    None
+}
+
+/// NeoDesk: LAN address of `id` found by `start_peer_lookup`, waiting up to `wait_ms` for it.
+pub async fn lan_peer_addr(id: &str, wait_ms: u128) -> Option<SocketAddr> {
+    let start = Instant::now();
+    loop {
+        let (ip, done) = LAN_LOOKUP.lock().unwrap().get(id).cloned()?;
+        if let Some(ip) = ip {
+            return Some(SocketAddr::new(ip, LAN_SECURE_PORT));
+        }
+        if done || start.elapsed().as_millis() > wait_ms {
+            return None;
+        }
+        hbb_common::sleep(0.05).await;
+    }
+}
+
 #[cfg(not(target_os = "ios"))]
 pub(super) fn start_listening() -> ResultType<()> {
     let addr = SocketAddr::from(([0, 0, 0, 0], get_broadcast_port()));

@@ -291,6 +291,13 @@ class MainActivity : FlutterActivity() {
         }
     }
 
+    private fun isHalfSizeSupported(caps: MediaCodecInfo.VideoCapabilities, w: Int, h: Int): Boolean {
+        val align = 64
+        val hw = (w / 2 + align - 1) / align * align
+        val hh = (h / 2 + align - 1) / align * align
+        return caps.isSizeSupported(hw, hh) || caps.isSizeSupported(hh, hw)
+    }
+
     private fun setCodecInfo() {
         val codecList = MediaCodecList(MediaCodecList.REGULAR_CODECS)
         val codecs = codecList.codecInfos
@@ -334,7 +341,10 @@ class MainActivity : FlutterActivity() {
                 val caps = codec.getCapabilitiesForType(mime_type)
                 if (codec.isEncoder) {
                     // Encoder's max_height and max_width are interchangeable
-                    if (!caps.videoCapabilities.isSizeSupported(w,h) && !caps.videoCapabilities.isSizeSupported(h,w)) {
+                    if (!caps.videoCapabilities.isSizeSupported(w,h) && !caps.videoCapabilities.isSizeSupported(h,w)
+                        // NeoDesk: gama media (p. ej. Snapdragon 680) limita a 1920x1088 y las pantallas
+                        // alargadas lo superan; a media escala si entran. Rust activa media escala en ese caso.
+                        && !isHalfSizeSupported(caps.videoCapabilities, w, h)) {
                         return@forEach
                     }
                 }

@@ -758,5 +758,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Continue", "Sighi"),
         ("Browser didn't open? Use the url below to sign in.", "Non s'est abertu su navigadore? Imprea s'URL inoghe in suta pro intrare."),
         ("Lock canvas", "Bloca sa tela"),
+        ("Allow control of this phone", ""),
+        ("Set a permanent password", ""),
+        ("Start the service and accept screen recording", ""),
+        ("Turn on NeoDesk Input in Accessibility", ""),
+        ("setup_restricted_settings_tip", ""),
+        ("setup_battery_tip", ""),
+        ("setup_overlay_tip", ""),
     ].iter().cloned().collect();
 }

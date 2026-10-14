@@ -566,6 +566,10 @@ fn run(vs: VideoService) -> ResultType<()> {
 
     let display_idx = vs.idx;
     let sp = vs.sp;
+    #[cfg(target_os = "android")]
+    if vs.source.is_monitor() {
+        prepare_hw_half_scale();
+    }
     let mut c = get_capturer(vs.source, display_idx, last_portable_service_running)?;
     #[cfg(windows)]
     if !scrap::codec::enable_directx_capture() && !c.is_gdi() {
@@ -1074,6 +1078,45 @@ fn get_recorder(
     recorder
 }
 
+// NeoDesk: true when no hardware encoder fits the full screen (e.g. 1080x2412 on a
+// 1920x1088-max encoder). MainActivity only reports such encoders if half size fits.
+#[cfg(target_os = "android")]
+fn hw_encoder_needs_half_scale() -> bool {
+    let Some(info) = scrap::android::ffi::get_codec_info() else {
+        return false;
+    };
+    let fits = |c: &scrap::android::ffi::MediaCodecInfo| {
+        (c.max_width >= info.w && c.max_height >= info.h)
+            || (c.max_width >= info.h && c.max_height >= info.w)
+    };
+    !info
+        .codecs
+        .iter()
+        .any(|c| c.is_encoder && c.hw == Some(true) && fits(c))
+}
+
+// NeoDesk: the hardware encoder is created at the capture size, so a screen bigger than the
+// encoder must already be at half scale before setup_encoder; otherwise MediaCodec creation
+// fails and the session falls back to VP9 software encoding.
+#[cfg(target_os = "android")]
+fn prepare_hw_half_scale() {
+    let hw = matches!(
+        Encoder::negotiated_codec(),
+        CodecFormat::H264 | CodecFormat::H265
+    );
+    if !hw || !hw_encoder_needs_half_scale() || scrap::screen_size().2 == 2 {
+        return;
+    }
+    log::info!("half scale before creating the hardware encoder");
+    scrap::android::call_main_service_set_by_name("half_scale", Some("true"), None).ok();
+    for _ in 0..40 {
+        if scrap::screen_size().2 == 2 {
+            break;
+        }
+        std::thread::sleep(Duration::from_millis(50));
+    }
+}
+
 #[cfg(target_os = "android")]
 fn check_change_scale(hardware: bool) -> ResultType<()> {
     use hbb_common::config::keys::OPTION_ENABLE_ANDROID_SOFTWARE_ENCODING_HALF_SCALE as SCALE_SOFT;
@@ -1093,7 +1136,9 @@ fn check_change_scale(hardware: bool) -> ResultType<()> {
     }
     let screen_size = scrap::screen_size();
     let scale_soft = hbb_common::config::option2bool(SCALE_SOFT, &Config::get_option(SCALE_SOFT));
-    let half_scale = !hardware && scale_soft;
+    // NeoDesk: keep the half scale MainService starts with, whatever the encoder, so the capture
+    // is never restarted mid-connection (see isHalfScale in MainService.kt).
+    let half_scale = scale_soft || hardware && hw_encoder_needs_half_scale();
     log::info!("hardware: {hardware}, scale_soft: {scale_soft}, screen_size: {screen_size:?}",);
     scrap::android::call_main_service_set_by_name(
         "half_scale",

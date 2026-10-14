@@ -1,9 +1,10 @@
 # NeoDesk Guide
 
 NeoDesk es un cliente de escritorio remoto derivado de RustDesk (AGPL-3.0), con marca
-propia de Geatel. Solo se construyen **Linux x86_64 (`.deb`)** y **Windows x86_64
-(`.exe` + `.msi`)**; macOS, Android, iOS, web y Sciter siguen en el árbol pero no se
-compilan ni se mantienen.
+propia de Geatel. Se construyen **Linux x86_64 (`.deb`)**, **Windows x86_64 (`.exe`)** y
+**Android arm64 (`.apk`, fuera de Play Store)**; macOS, iOS, web y Sciter siguen en el
+árbol pero no se compilan ni se mantienen. Requisitos de los teléfonos:
+`docs/NEODESK-ANDROID.md`.
 
 ## Project Layout
 
@@ -42,7 +43,7 @@ revisarlos antes de dar por bueno cualquier rebase.
 |---|---|---|
 | Nombre visible | `libs/hbb_common/src/config.rs` | `APP_NAME = "NeoDesk"` |
 | Organización | `libs/hbb_common/src/config.rs` | `ORG = "com.geatel"` |
-| Paquete Cargo | `Cargo.toml` | `name = "neodesk"`, `version = "1.0.0"` |
+| Paquete Cargo | `Cargo.toml` | `name = "neodesk"` (versión: ver `VERSION` del workflow) |
 | Librería FFI | `Cargo.toml` `[lib]` | `libneodesk` |
 | Binario Linux | `flutter/linux/CMakeLists.txt` | `BINARY_NAME "neodesk"` |
 | Binario Windows | `flutter/windows/CMakeLists.txt` | `BINARY_NAME "neodesk"` |
@@ -51,6 +52,10 @@ revisarlos antes de dar por bueno cualquier rebase.
 | Instalador MSI | `.github/workflows/neodesk-build.yml` | `preprocess.py --app-name NeoDesk` |
 | Colores | `flutter/lib/common.dart` | `accent 0xFF4F46E5`, `idColor`/`button 0xFF6366F1` |
 | Logos e iconos | `flutter/assets/`, `res/` | isotipo Geatel; `res/scalable.svg` es el que usa Cinnamon |
+| ID Android | `flutter/android/app/build.gradle` | `applicationId "com.geatel.neodesk"` (el paquete Kotlin sigue `com.carriez.flutter_hbb`, a propósito) |
+| Nombre Android | `AndroidManifest.xml`, `res/values/strings.xml` | `NeoDesk` / `NeoDesk Input`; esquema `neodesk://` |
+| Iconos Android | `flutter/android/app/src/main/res/mipmap-*` | isotipo Geatel (adaptativo, redondo, notificación) |
+| Firma del APK | secretos `ANDROID_SIGNING_KEY`, `ANDROID_KEY_PASSWORD` | llave `CN=NeoDesk, O=Geatel`; copia fuera del repo |
 
 **El copyright de Purslane Tech Pte. Ltd. y la licencia AGPL-3.0 se conservan.** Es
 obligación de la licencia, no un descuido.
@@ -76,6 +81,33 @@ excepciones codificadas son `powered_by_me` y `upgrade_rustdesk_server_pro*`.
 renombrarlas: el engine de Flutter, el driver de impresora y 16 dependencias git salen de
 ahí.
 
+### Android: decisiones que no se deben deshacer
+
+* **Librería nativa:** cargo deja `liblibneodesk.so`; dentro del APK debe llamarse
+  `libneodesk.so` (Dart la abre así y `ffi.kt` hace `loadLibrary("neodesk")`). El
+  workflow la renombra y verifica que esté.
+* **Solo `--lib`** al compilar con cargo-ndk: `src/main.rs` y `src/service.rs` siguen
+  importando `librustdesk` y no compilan; en Android no se usan.
+* **bindgen de `hwcodec`** necesita `BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android=--sysroot=<NDK>`
+  o toma las cabeceras de `/usr/include` del host.
+* **Media escala desde el arranque** (`isHalfScale = true` en `MainService.kt`, y
+  `check_change_scale` la mantiene). Cambiarla con la sesión abierta reinicia la captura,
+  y en Android 14+ eso vuelve a pedir el permiso de grabación y la imagen se corta
+  ("esperando imagen").
+* **Codificador por hardware:** los chips de gama media (p. ej. Snapdragon 680) aceptan
+  como máximo 1920×1088. `MainActivity.setCodecInfo` acepta el chip si cabe a media escala
+  y `prepare_hw_half_scale` (`video_service.rs`) baja la escala antes de crearlo; si no,
+  MediaCodec falla y se cae a VP9 por software. En Android, la preferencia VP8 del cliente
+  pasa a "auto" si hay H264/H265 por hardware (`codec.rs`).
+* **Red local cifrada:** al conectar por ID, `lan::start_peer_lookup` busca el ID por
+  difusión y `Client::connect` agrega la IP local como candidato al puerto 21120
+  (`lan_secure_server`, siempre con intercambio de claves firmado). El 21118 queda como en
+  upstream, sin cifrar, solo para conexión manual por IP.
+* **`mediacodec` (decodificar por hardware en Android) no compila**: el código de upstream
+  está desactualizado. Por eso Android → Android usa VP9 por software en el que comparte.
+* **Play Protect** advierte al instalar porque `targetSdkVersion` es 33; subirlo exige
+  pasar a AGP 8.
+
 ## Recortes de interfaz (MVP)
 
 Se ocultaron opciones comentándolas, con su etiqueta original intacta para poder
@@ -88,6 +120,13 @@ revertirlas una a una:
 * `flutter/lib/models/peer_tab_model.dart` — solo Recientes, Favoritos y Red local.
 * `flutter/lib/desktop/pages/connection_page.dart` — Conectar y Transferir archivos como
   botones visibles, sin desplegable.
+* Móvil: `flutter/lib/mobile/pages/home_page.dart` sin pestaña de chat y
+  `remote_page.dart` sin chat ni llamada de voz. **El teclado se mantiene** (en el teléfono
+  es la única forma de escribir en el equipo remoto). `mobile/pages/settings_page.dart`:
+  enlaces a este repo, sin aviso de privacidad de RustDesk.
+* Móvil: `flutter/lib/mobile/widgets/setup_guide.dart` es nuevo, la guía de 3 pasos para
+  que el teléfono pueda ser controlado (contraseña → NeoDesk Input → servicio). Ese orden
+  evita que el icono flotante bloquee el permiso de accesibilidad.
 
 ## Compilación local (Linux)
 
@@ -115,6 +154,25 @@ tiempo:
   hay que actualizar `Cargo.lock` a mano o el build muere antes de compilar nada.
 
 Con caché caliente son unos 7 minutos. El resultado es `neodesk-<version>.deb` en la raíz.
+
+`rebuild.sh` compila sin `hwcodec`: el `.deb` resultante no decodifica H264/H265 por
+hardware. Para un `.deb` igual al de CI, `~/neodesk-build/run-desktop.sh` (monta este
+árbol y usa `rebuild-ci.sh`: `cargo build --features hwcodec,flutter,unix-file-copy-paste`
+y luego `build.py --flutter --skip-cargo`).
+
+### Android (laboratorio)
+
+Imagen `neodesk-android-build:latest` (`~/neodesk-build/android/Dockerfile`: la de
+escritorio más NDK r28c, cargo-ndk 3.1.2 y Java 17). `~/neodesk-build/android/run-build.sh
+[all|rust|apk]` deja el APK en `flutter/build/app/outputs/flutter-apk/` y `adb`
+(`~/neodesk-build/platform-tools/adb`) lo instala en un teléfono por USB.
+
+* Android y escritorio usan **directorios `vcpkg-installed` separados**: `vcpkg install`
+  en modo manifiesto borra los paquetes de los triplets que no instala.
+* La llave de firma está en `~/neodesk-build/android/keys` (copia en `keys-backup`), fuera
+  del repo. Si se pierde, ningún teléfono podrá actualizar encima: habría que desinstalar.
+* En los Honor/Huawei, `adb install` falla con `INSTALL_FAILED_VERIFICATION_FAILURE`
+  hasta activar "Instalar a través de USB" en Opciones de desarrollador.
 
 ## Rust Rules
 

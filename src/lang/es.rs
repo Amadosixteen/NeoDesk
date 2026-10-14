@@ -758,5 +758,12 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("Continue", "Continuar"),
         ("Browser didn't open? Use the url below to sign in.", "¿No se abrió el navegador? Usa la URL de abajo para iniciar sesión."),
         ("Lock canvas", "Bloquear lienzo"),
+        ("Allow control of this phone", "Permitir el control de este teléfono"),
+        ("Set a permanent password", "Fija una contraseña permanente"),
+        ("Start the service and accept screen recording", "Inicia el servicio y acepta la grabación de pantalla"),
+        ("Turn on NeoDesk Input in Accessibility", "Activa NeoDesk Input en Accesibilidad"),
+        ("setup_restricted_settings_tip", "Si el interruptor aparece en gris: abre Ajustes > Aplicaciones > NeoDesk, toca el menú ⋮, elige \"Permitir ajustes restringidos\" y vuelve a intentarlo."),
+        ("setup_battery_tip", "Recomendado: desactiva el ahorro de batería para NeoDesk en Ajustes, para que Android no detenga el servicio."),
+        ("setup_overlay_tip", "Si Android avisa que una app está obstaculizando el permiso: detén el servicio, activa NeoDesk Input y vuelve a iniciar el servicio."),
     ].iter().cloned().collect();
 }

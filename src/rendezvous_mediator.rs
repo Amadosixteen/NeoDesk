@@ -134,6 +134,10 @@ impl RendezvousMediator {
         tokio::spawn(async move {
             direct_server(server_cloned).await;
         });
+        let server_cloned = server.clone();
+        tokio::spawn(async move {
+            lan_secure_server(server_cloned).await;
+        });
         #[cfg(target_os = "android")]
         let start_lan_listening = true;
         #[cfg(not(any(target_os = "android", target_os = "ios")))]
@@ -837,6 +841,60 @@ fn get_direct_port() -> i32 {
         port = RENDEZVOUS_PORT + 2;
     }
     port
+}
+
+// NeoDesk: encrypted LAN listener. Unlike `direct_server` (port 21118, plain, kept as-is for
+// manual IP connections), it always runs the signed key exchange, so a client that connected
+// by ID can carry the session over the LAN without giving up end-to-end encryption.
+async fn lan_secure_server(server: ServerPtr) {
+    let port = crate::lan::LAN_SECURE_PORT;
+    let mut listener = None;
+    loop {
+        let disabled = !option2bool(
+            "enable-lan-discovery",
+            &Config::get_option("enable-lan-discovery"),
+        ) || option2bool("stop-service", &Config::get_option("stop-service"));
+        if disabled {
+            listener = None;
+            sleep(1.).await;
+            continue;
+        }
+        if listener.is_none() {
+            match hbb_common::tcp::listen_any(port).await {
+                Ok(l) => {
+                    log::info!("LAN secure server listening on: {:?}", l.local_addr());
+                    listener = Some(l);
+                }
+                Err(err) => {
+                    log::error!("Failed to start LAN secure server on {}: {}", port, err);
+                    sleep(30.).await;
+                    continue;
+                }
+            }
+        }
+        if let Some(l) = listener.as_mut() {
+            if let Ok(Ok((stream, addr))) = hbb_common::timeout(1000, l.accept()).await {
+                stream.set_nodelay(true).ok();
+                log::info!("LAN secure access from {}", addr);
+                let local_addr = stream
+                    .local_addr()
+                    .unwrap_or(Config::get_any_listen_addr(true));
+                let server = server.clone();
+                tokio::spawn(async move {
+                    allow_err!(
+                        crate::server::create_tcp_connection(
+                            server,
+                            hbb_common::Stream::from(stream, local_addr),
+                            addr,
+                            true,
+                            ConnectionMeta::default(),
+                        )
+                        .await
+                    );
+                });
+            }
+        }
+    }
 }
 
 async fn direct_server(server: ServerPtr) {

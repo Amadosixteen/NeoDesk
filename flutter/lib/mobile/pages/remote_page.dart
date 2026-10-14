@@ -606,25 +606,25 @@ class _RemotePageState extends State<RemotePage> with WidgetsBindingObserver {
                                     () => _showGestureHelp = !_showGestureHelp),
                               ),
                             ]) +
-                  (isWeb
-                      ? []
-                      : <Widget>[
-                          futureBuilder(
-                              future: gFFI.invokeMethod(
-                                  "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
-                              hasData: (isSupportVoiceCall) => IconButton(
-                                    color: Colors.white,
-                                    icon: isAndroid && isSupportVoiceCall
-                                        ? SvgPicture.asset('assets/chat.svg',
-                                            colorFilter: ColorFilter.mode(
-                                                Colors.white, BlendMode.srcIn))
-                                        : Icon(Icons.message),
-                                    onPressed: () =>
-                                        isAndroid && isSupportVoiceCall
-                                            ? showChatOptions(widget.id)
-                                            : onPressedTextChat(widget.id),
-                                  ))
-                        ]) +
+//                   (isWeb
+//                       ? []
+//                       : <Widget>[
+//                           futureBuilder(
+//                               future: gFFI.invokeMethod(
+//                                   "get_value", "KEY_IS_SUPPORT_VOICE_CALL"),
+//                               hasData: (isSupportVoiceCall) => IconButton(
+//                                     color: Colors.white,
+//                                     icon: isAndroid && isSupportVoiceCall
+//                                         ? SvgPicture.asset('assets/chat.svg',
+//                                             colorFilter: ColorFilter.mode(
+//                                                 Colors.white, BlendMode.srcIn))
+//                                         : Icon(Icons.message),
+//                                     onPressed: () =>
+//                                         isAndroid && isSupportVoiceCall
+//                                             ? showChatOptions(widget.id)
+//                                             : onPressedTextChat(widget.id),
+//                                   ))
+//                         ]) +
                   [
                     IconButton(
                       color: Colors.white,

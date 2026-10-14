@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_hbb/desktop/pages/desktop_home_page.dart';
 import 'package:flutter_hbb/mobile/widgets/dialog.dart';
+import 'package:flutter_hbb/mobile/widgets/setup_guide.dart';
 import 'package:flutter_hbb/models/chat_model.dart';
 import 'package:get/get.dart';
 import 'package:provider/provider.dart';
@@ -214,6 +215,7 @@ class _ServerPageState extends State<ServerPage> {
                             ? ServerInfo()
                             : ServiceNotRunningNotification(),
                         const ConnectionManager(),
+                        const SetupGuide(),
                         const PermissionChecker(),
                         SizedBox.fromSize(size: const Size(0, 15.0)),
                       ],

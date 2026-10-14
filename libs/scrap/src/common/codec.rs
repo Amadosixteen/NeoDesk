@@ -267,6 +267,15 @@ impl Encoder {
             .find(|(_, count)| *count == max_count)
             .unwrap_or((PreferCodec::Auto.into(), 0));
         let preference = most_frequent.enum_value_or(PreferCodec::Auto);
+        // NeoDesk: VP8 es el codec por defecto del cliente (rapido en PC), pero en Android se
+        // codifica por software y a resolucion de movil el video llega con retraso. Si el
+        // telefono tiene H264/H265 por hardware (MediaCodec), se deja que "auto" lo elija.
+        #[cfg(target_os = "android")]
+        let preference = if preference == PreferCodec::VP8 && (h264_useable || h265_useable) {
+            PreferCodec::Auto
+        } else {
+            preference
+        };
 
         // auto: h265 > h264 > av1/vp9/vp8
         let av1_test = Config::get_option(hbb_common::config::keys::OPTION_AV1_TEST) != "N";

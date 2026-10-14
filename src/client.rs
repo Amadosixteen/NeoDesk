@@ -273,6 +273,7 @@ impl Client {
             ));
         }
 
+        crate::lan::start_peer_lookup(peer.to_owned());
         let other_server = interface.get_lch().read().unwrap().other_server.clone();
         let (peer, other_server, key, token) = if let Some((a, b, c)) = other_server.as_ref() {
             (a.as_ref(), b.as_ref(), c.as_ref(), "")
@@ -696,6 +697,19 @@ impl Client {
         if let Some(udp_socket_v6) = udp_socket_v6 {
             connect_futures.push(udp_nat_connect(udp_socket_v6, "IPv6", connect_timeout).boxed());
         }
+        // NeoDesk: same network -> straight to the peer's encrypted LAN listener. The signed key
+        // from the rendezvous server still authenticates it in secure_connection below.
+        let lan_peer_id = peer_id.to_owned();
+        connect_futures.push(
+            async move {
+                let addr = crate::lan::lan_peer_addr(&lan_peer_id, 1500)
+                    .await
+                    .ok_or_else(|| anyhow!("peer not found on LAN"))?;
+                let conn = connect_tcp_local(addr, None, connect_timeout.max(MIN)).await?;
+                Ok((conn, None, "LAN"))
+            }
+            .boxed(),
+        );
         // Run all connection attempts concurrently, return the first successful one
         let (mut conn, kcp, mut typ) = match select_ok(connect_futures).await {
             Ok(conn) => (Ok(conn.0 .0), conn.0 .1, conn.0 .2),

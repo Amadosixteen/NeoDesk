@@ -52,7 +52,7 @@ env:
   # 2. Update the `VCPKG_COMMIT_ID` in `ci.yml` and `playground.yml`.
   VCPKG_COMMIT_ID: "9e593bb18ea69cc5095e012465dcd675a822ed0d"
   ARMV7_VCPKG_COMMIT_ID: "6f29f12e82a8293156836ad81cc9bf5af41fe836" # 2025.01.13, got "/opt/artifacts/vcpkg/vcpkg: No such file or directory" with latest version
-  VERSION: "1.1.1"
+  VERSION: "1.2.0"
   NDK_VERSION: "r28c"
   #signing keys env variable checks
   ANDROID_SIGNING_KEY: "${{ secrets.ANDROID_SIGNING_KEY }}"
@@ -697,3 +697,137 @@ jobs:
         with:
           name: neodesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
           path: neodesk-${{ env.VERSION }}-${{ matrix.job.arch }}.deb
+
+  # NeoDesk: APK de Android, solo arm64. Mismos pasos que el laboratorio local
+  # (~/neodesk-build/android/build-apk.sh); requisitos de los telefonos en
+  # docs/NEODESK-ANDROID.md. Secretos: ANDROID_SIGNING_KEY (el .jks en base64) y
+  # ANDROID_KEY_PASSWORD. Sin la misma llave, el APK no se instala encima del anterior.
+  build-neodesk-android:
+    needs: [generate-bridge]
+    name: build neodesk android arm64
+    runs-on: ubuntu-22.04
+    env:
+      ANDROID_ABI: arm64-v8a
+      RUST_TARGET: aarch64-linux-android
+      NDK_PKG_VERSION: "28.2.13676358" # r28c
+    steps:
+      - name: Export GitHub Actions cache environment variables
+        uses: actions/github-script@d7906e4ad0b1822421a7e6a35d5ca353c962f410 # v6
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Free space
+        run: |
+          sudo rm -rf /opt/ghc /usr/share/dotnet
+          df -h
+
+      - name: Checkout source code
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4
+
+      - name: Install NDK, SDK platform and Java 17
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y nasm
+          SDKM="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKM" --licenses > /dev/null
+          "$SDKM" "ndk;${NDK_PKG_VERSION}" "platforms;android-34" "build-tools;34.0.0"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/${NDK_PKG_VERSION}" >> $GITHUB_ENV
+          echo "JAVA_HOME=$JAVA_HOME_17_X64" >> $GITHUB_ENV
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@e97e2d8cc328f1b50210efc529dca0028893a2d9 # v1
+        with:
+          toolchain: ${{ env.RUST_VERSION }}
+          targets: ${{ env.RUST_TARGET }}
+          components: "rustfmt"
+
+      - name: Install cargo-ndk
+        run: cargo install cargo-ndk --version ${{ env.CARGO_NDK_VERSION }} --locked
+
+      - name: Restore bridge files
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: bridge-artifact
+          path: ./
+
+      - name: Setup vcpkg with Github Actions binary cache
+        uses: lukka/run-vcpkg@b1a0dd252f06b9e25b3c022a9a03bd7a427fb6a2 # v11
+        with:
+          vcpkgDirectory: /opt/artifacts/vcpkg
+          vcpkgGitCommitId: ${{ env.VCPKG_COMMIT_ID }}
+          doNotCache: false
+
+      - name: Build vcpkg dependencies
+        run: ./flutter/build_android_deps.sh ${{ env.ANDROID_ABI }}
+        shell: bash
+
+      - name: Build Rust library
+        shell: bash
+        run: |
+          NDK_SYSROOT="$ANDROID_NDK_HOME/toolchains/llvm/prebuilt/linux-x86_64/sysroot"
+          # bindgen (hwcodec) no recibe el sysroot del NDK y cae en /usr/include del host.
+          export BINDGEN_EXTRA_CLANG_ARGS_aarch64_linux_android="--sysroot=$NDK_SYSROOT"
+          # Solo la libreria, como build.py en escritorio: src/main.rs y src/service.rs
+          # siguen importando librustdesk y no se usan en Android.
+          cargo ndk --platform 21 --target $RUST_TARGET build --locked --release --lib --features flutter,hwcodec
+          JNI=flutter/android/app/src/main/jniLibs/$ANDROID_ABI
+          mkdir -p $JNI
+          # Dart abre libneodesk.so y Kotlin hace loadLibrary("neodesk"); cargo deja liblibneodesk.so.
+          cp target/$RUST_TARGET/release/liblibneodesk.so $JNI/libneodesk.so
+          cp $NDK_SYSROOT/usr/lib/aarch64-linux-android/libc++_shared.so $JNI/
+
+      - name: Install flutter
+        uses: subosito/flutter-action@2783a3f08e1baf891508463f8c6653c258246225  # v2.12.0
+        with:
+          channel: "stable"
+          flutter-version: ${{ env.ANDROID_FLUTTER_VERSION }}
+
+      - name: Write signing config
+        env:
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -z "$ANDROID_SIGNING_KEY" ] || [ -z "$ANDROID_KEY_PASSWORD" ]; then
+            echo "Faltan los secretos ANDROID_SIGNING_KEY / ANDROID_KEY_PASSWORD"; exit 1
+          fi
+          echo "$ANDROID_SIGNING_KEY" | base64 -d > "$RUNNER_TEMP/neodesk-release.jks"
+          printf 'storePassword=%s\nkeyPassword=%s\nkeyAlias=neodesk\nstoreFile=%s\n' \
+            "$ANDROID_KEY_PASSWORD" "$ANDROID_KEY_PASSWORD" "$RUNNER_TEMP/neodesk-release.jks" \
+            > flutter/android/key.properties
+
+      - name: Build APK
+        run: |
+          cd flutter
+          flutter build apk --release --target-platform android-arm64 --split-per-abi
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk ../neodesk-${{ env.VERSION }}-aarch64.apk
+
+      - name: Verify APK
+        # Lo que en local costo pruebas: la libreria con el nombre que buscan Dart y Kotlin,
+        # el applicationId propio y la llave de NeoDesk (otra llave impide actualizar encima).
+        run: |
+          APK=neodesk-${{ env.VERSION }}-aarch64.apk
+          BT=$ANDROID_HOME/build-tools/34.0.0
+          unzip -l $APK | grep -q "lib/arm64-v8a/libneodesk.so" \
+            || { echo "FALTA lib/arm64-v8a/libneodesk.so en el APK"; exit 1; }
+          $BT/aapt dump badging $APK | grep -q "package: name='com.geatel.neodesk'" \
+            || { echo "applicationId distinto de com.geatel.neodesk"; exit 1; }
+          $BT/apksigner verify --print-certs $APK | grep -q "CN=NeoDesk, O=Geatel" \
+            || { echo "El APK no esta firmado con la llave de NeoDesk"; exit 1; }
+          echo "APK verificado"
+
+      - name: Upload apk
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        if: env.UPLOAD_ARTIFACT == 'true'
+        with:
+          name: neodesk-${{ env.VERSION }}-aarch64.apk
+          path: neodesk-${{ env.VERSION }}-aarch64.apk
+
+      - name: Publish apk
+        if: env.UPLOAD_ARTIFACT == 'true'
+        uses: softprops/action-gh-release@de2c0eb89ae2a093876385947365aca7b0e5f844 # v1
+        with:
+          prerelease: true
+          tag_name: ${{ env.TAG_NAME }}
+          files: |
+            neodesk-*.apk

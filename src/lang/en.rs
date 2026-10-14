@@ -275,5 +275,8 @@ pub static ref T: std::collections::HashMap<&'static str, &'static str> =
         ("id_whitelist_caveat_tip", "The ID is reported by the connecting client. This whitelist reduces exposure and does not replace the password or 2FA."),
         ("whitelist_cidr_tip", "CIDR notation is supported, e.g. 192.168.1.0/24"),
         ("Your ip is blocked by the peer", "Your IP is blocked by the peer"),
+        ("setup_restricted_settings_tip", "If the switch is greyed out: open Settings > Apps > NeoDesk, tap the ⋮ menu, choose \"Allow restricted settings\" and try again."),
+        ("setup_battery_tip", "Recommended: turn off battery optimization for NeoDesk in Settings, so Android does not stop the service."),
+        ("setup_overlay_tip", "If Android says an app is obscuring the permission request: stop the service, turn on NeoDesk Input, then start the service again."),
     ].iter().cloned().collect();
 }
